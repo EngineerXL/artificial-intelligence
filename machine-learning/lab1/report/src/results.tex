@@ -12,8 +12,9 @@ Recall: 0.9863013698630136
 Precision: 0.9863013698630136
 \end{alltt}
 \begin{center}
-\includegraphics[scale=0.35]{result}
+\includegraphics[width=\textwidth]{result}
 \end{center}
+\pagebreak
 
 \subsubsection{sklearn.neighbors.KNeighborsClassifier}
 \begin{alltt}
@@ -24,7 +25,7 @@ Recall: 0.9863013698630136
 Precision: 0.9863013698630136
 \end{alltt}
 \begin{center}
-\includegraphics[scale=0.35]{result}
+\includegraphics[width=\textwidth]{result}
 \end{center}
 \pagebreak
 
@@ -39,7 +40,7 @@ Recall: 0.9863013698630136
 Precision: 0.9863013698630136
 \end{alltt}
 \begin{center}
-\includegraphics[scale=0.35]{result}
+\includegraphics[width=\textwidth]{result}
 \end{center}
 
 \subsubsection{sklearn.linear\_model.LogisticRegression}
@@ -52,7 +53,7 @@ Recall: 0.9863013698630136
 Precision: 0.9863013698630136
 \end{alltt}
 \begin{center}
-\includegraphics[scale=0.35]{result}
+\includegraphics[width=\textwidth]{result}
 \end{center}
 \pagebreak
 
@@ -67,19 +68,19 @@ Recall: 0.9863013698630136
 Precision: 0.9863013698630136
 \end{alltt}
 \begin{center}
-\includegraphics[scale=0.35]{result}
+\includegraphics[width=\textwidth]{result}
 \end{center}
 
-\subsubsection{sklearn.svm.SVC}
+\subsubsection{sklearn.svm.LinearSVC}
 \begin{alltt}
-Лучшие гиперпараметры модели: {'svc__kernel': 'poly'}
+Лучшие гиперпараметры модели: {'svc__loss': 'hinge', 'svc__max_iter': 10000.0}
 Лучший счёт модели: 0.9950000000000001
 Accuracy: 0.99
 Recall: 0.9863013698630136
 Precision: 0.9863013698630136
 \end{alltt}
 \begin{center}
-\includegraphics[scale=0.35]{result}
+\includegraphics[width=\textwidth]{result}
 \end{center}
 \pagebreak
 
@@ -91,7 +92,7 @@ Recall: 0.9863013698630136
 Precision: 0.9863013698630136
 \end{alltt}
 \begin{center}
-\includegraphics[scale=0.35]{result}
+\includegraphics[width=\textwidth]{result}
 \end{center}
 
 \subsubsection{sklearn.naive\_bayes.GaussianNB}
@@ -101,8 +102,20 @@ Recall: 0.9863013698630136
 Precision: 0.9863013698630136
 \end{alltt}
 \begin{center}
-\includegraphics[scale=0.35]{result}
+\includegraphics[width=\textwidth]{result}
 \end{center}
 \pagebreak
+
+\subsection{Разделяющая прямая для метода опорных векторов}
+\subsubsection{Моя реализация}
+\begin{center}
+\includegraphics[width=\textwidth]{svm_lines_my}
+\end{center}
+\pagebreak
+
+\subsubsection{sklearn.svm.LinearSVC}
+\begin{center}
+\includegraphics[width=\textwidth]{svm_lines}
+\end{center}
 
 \pagebreak
