@@ -1,0 +1,351 @@
+\section{Описание}
+
+Подготовка данных и совместимость с scikit-learn сделаны так же, как и в прошлой лабораторной работе. Приведу реализации моделей.
+
+\subsection{Дерево принятия решений}
+Для хранений данных в узлах дерева опишу струкуру, которая может принять решение или выдать вероятность класса. Если вершина является листом, то value содержит вероятность класса, иначе value содержит значение для предиката, а ind индекс значения.
+\begin{lstlisting}[language=Python]
+class TreeData():
+    def __init__(self, value = None, ind = None, leaf = True):
+        self.value = value
+        self.ind = ind
+        self.leaf = leaf
+
+    def is_leaf(self):
+        return self.leaf
+
+    def decide(self, X):
+        if (self.is_leaf()):
+            return None
+        else:
+            return True if (X[self.ind] >= self.value) else False
+
+    def predict(self, X):
+        if (self.is_leaf()):
+            return value
+        else:
+            return None
+\end{lstlisting}
+\pagebreak
+
+Буду хранить дерево в виде списка смежности вершин и массива с данными для каждой вершины.
+\begin{lstlisting}[language=Python]
+class Graph:
+    def __init__(self):
+        self.data = []
+        self.info = []
+        self.size = 0
+        self.add()
+
+    def can_go(self, u, c):
+        return c in self.data[u]
+
+    def go(self, u, c):
+        return self.data[u][c]
+
+    def set_go(self, u, c, v):
+        self.data[u][c] = v
+
+    def get_tree_data(self, u):
+        return self.info[u]
+
+    def set_tree_data(self, u, tree_data):
+        self.info[u] = tree_data
+
+    def add(self):
+        self.data.append(dict())
+        self.info.append(TreeData())
+        self.size += 1
+        return self.size - 1
+
+    def is_leaf(self, u):
+        return self.info[u].is_leaf()
+\end{lstlisting}
+\pagebreak
+
+Класс дерева принятия решений содержит вспомогательные функции: get\_count для подсчёта количества классов, ans для вычисления вероятности, ans\_class для определения номера класса по вероятности, функции для вычисления предсказания, создания терминальной вершины и построения дерева по набору данных.
+\begin{lstlisting}[language=Python]
+class DecisionTree:
+    def __init__(self, max_depth, min_count, rnd_split):
+        self.tree = Graph()
+        self.max_depth = max_depth
+        self.min_count = min_count
+        self.rnd_split = rnd_split
+        self.data = []
+
+    def get_count(self, arr):
+        res = [0 for _ in range(2)]
+        for elem in arr:
+            res[elem] += 1
+        return res
+
+    def ans(self, cnt0, cnt1):
+        if (cnt0 + cnt1 == 0):
+            return None
+        else:
+            return (cnt1) / (cnt0 + cnt1)
+
+    def ans_class(self, p):
+        return 1 if (p > 0.5) else 0
+
+    def decide(self, X):
+        return self.decide_rec(0, X)
+
+    def decide_rec(self, u, X):
+        u_data = self.tree.get_tree_data(u)
+        if (self.tree.is_leaf(u)):
+            return u_data.value
+        else:
+            dec = u_data.decide(X)
+            return self.decide_rec(self.tree.go(u, dec), X)
+
+    def make_leaf(self, u, value):
+        u_data = TreeData(value = value, leaf = True)
+        self.tree.set_tree_data(u, u_data)
+
+    def rnd_ids(self, n):
+        res = []
+        while (len(res) * len(res) < n):
+            rnd_num = randint(0, n - 1)
+            while (rnd_num in res):
+                rnd_num = randint(0, n - 1)
+            res.append(rnd_num)
+        return res
+
+    def build(self, X, y):
+        self.X = X
+        self.y = y
+        self.n = X.shape[0]
+        self.d = X.shape[1]
+        ids = np.arange(self.n)
+        self.build_rec(0, ids, 1)
+
+    def build_rec(self, u, ids, h):
+        X = self.X[ids]
+        y = self.y[ids]
+        u_cnt = self.get_count(y)
+        u_ans = self.ans(u_cnt[0], u_cnt[1])
+        stop1 = (len(y) <= self.min_count)
+        stop2 = (h > self.max_depth)
+        stop3 = (u_ans == None)
+        if (stop1 or stop2 or stop3):
+            self.make_leaf(u, u_ans)
+            return
+        z = self.ans_class(u_ans)
+        n = len(ids)
+        min_loss = n - u_cnt[z]
+        res = (-1, -1)
+        u_data = self.tree.get_tree_data(u)
+        split_ids = (self.rnd_ids(self.d) if self.rnd_split else range(self.d))
+        for i in split_ids:
+            cnt_l, cnt_r = [0 for _ in range(2)], [elem for elem in u_cnt]
+            tmp = sorted([(elem[i], y[j]) for (j, elem) in enumerate(X)])
+            loss_l, loss_r = 0, n - u_cnt[z]
+            size_l, size_r = 0, n
+            for j in range(self.n):
+                while (size_l < n and tmp[size_l][0] <= tmp[j][0]):
+                    y_l = tmp[size_l][1]
+                    cnt_l[y_l] += 1
+                    cnt_r[y_l] -= 1
+                    size_l += 1
+                    size_r -= 1
+                if (size_l == 0 or size_r == 0):
+                    continue
+                ans_l = self.ans_class(self.ans(cnt_l[0], cnt_l[1]))
+                ans_r = self.ans_class(self.ans(cnt_r[0], cnt_r[1]))
+                loss_l = size_l - cnt_l[ans_l]
+                loss_r = size_r - cnt_r[ans_r]
+                split_loss = loss_l + loss_r
+                if (split_loss < min_loss):
+                    min_loss = split_loss
+                    res = (i, tmp[j][0])
+        if (res == (-1, -1)):
+            self.make_leaf(u, u_ans)
+            return
+        u_data = TreeData(value = res[1], ind = res[0], leaf = False)
+        self.tree.set_tree_data(u, u_data)
+        l, r = [], []
+        for (j, elem) in enumerate(X):
+            if (u_data.decide(elem)):
+                l.append(j)
+            else:
+                r.append(j)
+        l, r = np.array(l), np.array(r)
+        if (len(l) == 0 or len(r) == 0):
+            self.make_leaf(u, u_ans)
+            return
+        ul = self.tree.add()
+        ur = self.tree.add()
+        self.tree.set_go(u, True, ul)
+        self.tree.set_go(u, False, ur)
+        self.build_rec(ul, l, h + 1)
+        self.build_rec(ur, r, h + 1)
+\end{lstlisting}
+\pagebreak
+
+Сам классификатор содержит дерево и использует его методы.
+\begin{lstlisting}[language=Python]
+class MyDecisionTreeClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, max_depth = 10, min_count = 50, rnd_split = False):
+        self.max_depth = max_depth
+        self.min_count = min_count
+        self.rnd_split = rnd_split
+        self.tree = DecisionTree(max_depth, min_count, rnd_split)
+
+    def fit(self, X, y):
+        # Check that X and y have correct shape
+        X, y = check_X_y(X, y)
+        # Store the classes seen during fit
+        self.classes_ = unique_labels(y)
+
+        self.X_ = X
+        self.y_ = y
+        self.tree.build(X, y)
+        # Return the classifier
+        return self
+
+    def predict(self, X):
+        # Check is fit had been called
+        check_is_fitted(self, ['X_', 'y_'])
+
+        # Input validation
+        X = check_array(X)
+
+        p = []
+        for elem in X:
+            z = self.tree.decide(elem)
+            p.append(1 if z > 0.5 else 0)
+        return np.array(p)
+\end{lstlisting}
+\pagebreak
+
+\subsection{Случайный лес}
+
+Классификатор случайного леса содержит список решающих деревьев со случайным выбором параметра для разделения.
+\begin{lstlisting}[language=Python]
+class MyRandomForestClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, n_trees = 10, max_depth = 2, min_count = 5):
+        self.n_trees = n_trees
+        self.max_depth = max_depth
+        self.min_count = min_count
+        self.trees = [DecisionTree(max_depth, min_count, rnd_split = True) for _ in range(self.n_trees)]
+
+    def fit(self, X, y):
+        # Check that X and y have correct shape
+        X, y = check_X_y(X, y)
+        # Store the classes seen during fit
+        self.classes_ = unique_labels(y)
+
+        self.X_ = X
+        self.y_ = y
+        for (i, tree) in enumerate(self.trees):
+            rnd_ids = np.random.choice(len(X), (2 * len(X)) // self.n_trees)
+            X_sub = X[rnd_ids]
+            y_sub = y[rnd_ids]
+            tree.build(X_sub, y_sub)
+        # Return the classifier
+        return self
+
+    def predict(self, X):
+        # Check is fit had been called
+        check_is_fitted(self, ['X_', 'y_'])
+
+        # Input validation
+        X = check_array(X)
+
+        p = []
+        for elem in X:
+            z = 0
+            for tree in self.trees:
+                z += tree.decide(elem)
+            z /= self.n_trees
+            p.append(1 if z > 0.5 else 0)
+        return np.array(p)
+\end{lstlisting}
+\pagebreak
+
+\subsection{Мягкое голосование}
+
+Мягкое голосование принимает список классификаторов, выдающий вероятность класса. По их предсказаниям производится голосование.
+\begin{lstlisting}[language=Python]
+class SVEnsemble(ClassifierMixin, BaseEstimator):
+    def __init__(self, models):
+        self.models = models
+
+    def fit(self, X, y):
+        # Check that X and y have correct shape
+        X, y = check_X_y(X, y)
+        # Store the classes seen during fit
+        self.classes_ = unique_labels(y)
+
+        self.X_ = X
+        self.y_ = y
+        for model in self.models:
+            model.fit(X, y)
+        # Return the classifier
+        return self
+
+    def predict(self, X):
+        # Check is fit had been called
+        check_is_fitted(self, ['X_', 'y_'])
+
+        # Input validation
+        X = check_array(X)
+
+        y, p = np.ndarray((X.shape[0],)), []
+        for model in models:
+            p.append(model.predict(X))
+        p = np.array(p).T
+        for i in range(len(X)):
+            p_of_labels = np.array([0 for _ in range(2)])
+            for j in range(len(models)):
+                p1 = p[i][j]
+                p0 = 1 - p1
+                p_of_labels[0] += p0
+                p_of_labels[1] += p1
+            y[i] = p_of_labels.argmax()
+        return y
+\end{lstlisting}
+\pagebreak
+
+\subsection{Жёсткое голосование}
+
+Как и мягкое голосование классификатор принимает список моделей, выдающих вероятности класса. На их основе строятся предсказания и подсчитываются голоса, затем производится голосование.
+\begin{lstlisting}[language=Python]
+class HVEnsemble(ClassifierMixin, BaseEstimator):
+    def __init__(self, models):
+        self.models = models
+
+    def fit(self, X, y):
+        # Check that X and y have correct shape
+        X, y = check_X_y(X, y)
+        # Store the classes seen during fit
+        self.classes_ = unique_labels(y)
+
+        self.X_ = X
+        self.y_ = y
+        for model in self.models:
+            model.fit(X, y)
+        # Return the classifier
+        return self
+
+    def predict(self, X):
+        # Check is fit had been called
+        check_is_fitted(self, ['X_', 'y_'])
+
+        # Input validation
+        X = check_array(X)
+
+        y, p = np.ndarray((X.shape[0],)), []
+        for model in models:
+            p.append(model.predict(X))
+        p = np.array(p).T
+        for i in range(len(X)):
+            cnt = np.array([0 for _ in range(2)])
+            for j in range(len(models)):
+                label = (1 if p[i][j] > 0.5 else 0)
+                cnt[label] += 1
+            y[i] = cnt.argmax()
+        return y
+\end{lstlisting}
+\pagebreak
