@@ -1,2 +1,2 @@
 pdf:
-	jupyter nbconvert --to pdf --config cfg.py ../$(ARGS)/$(ARGS).ipynb
+	jupyter nbconvert --to pdf --config cfg.py ../"$(ARGS)"/"$(ARGS)".ipynb
