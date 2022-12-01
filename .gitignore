@@ -1,6 +1,12 @@
 ## Jupyter Notebook checkpoints
 .ipynb_checkpoints
 
+## VOC dataset
+VOC*
+
+## MNIST dataset
+MNIST
+
 ## LaTeX part
 ## Core latex/pdflatex auxiliary files:
 *.aux
