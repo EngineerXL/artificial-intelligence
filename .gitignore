@@ -7,6 +7,9 @@ VOC*
 ## MNIST dataset
 MNIST
 
+## CIFAR-10 dataset
+cifar-10*
+
 ## LaTeX part
 ## Core latex/pdflatex auxiliary files:
 *.aux
