@@ -1,0 +1,266 @@
+\section{Алгоритм}
+\subsection{Выбор алгоритма}
+Я выбрал дерево решений --- логический алгоритм классификации, решающий задачи классификации и регрессии. Представляет собой объединение логических условий в структуру дерева.
+\subsection{Реализация алгоритма}
+\subsubsection{Вершина дерева}
+Описываю класс вершины дерева, в которой хранится предикат $X_{ind} > value$. Если вершина является терминальной, то $value$ хранит вероятности для класса.
+\begin{lstlisting}[language=python, keepspaces=true]
+class TreeData:
+      def __init__(self, value=None, ind=None, leaf=True):
+          self.value = value
+          self.ind = ind
+          self.leaf = leaf
+  
+      def is_leaf(self):
+          return self.leaf
+  
+      def decide(self, X):
+          if self.is_leaf():
+              return None
+          else:
+              return True if X[self.ind] > self.value else False
+  
+      def predict(self, X):
+          if self.is_leaf():
+              return value
+          else:
+              return None
+\end{lstlisting}
+\pagebreak
+\subsubsection{Граф}
+Для удобного представления дерева реализую граф, в который легко можно добавить новые вершины. Каждая вершина хранит словарь переходов \texttt{data}, что позволяет при случае использовать этот класс не только для бинарного дерева, но и для дерева общего вида.
+\begin{lstlisting}[language=python, keepspaces=true]
+class Graph:
+      def __init__(self):
+          self.data = []
+          self.info = []
+          self.size = 0
+          self.add()
+  
+      def can_go(self, u, c):
+          return c in self.data[u]
+  
+      def go(self, u, c):
+          return self.data[u][c]
+  
+      def set_go(self, u, c, v):
+          self.data[u][c] = v
+  
+      def get_tree_data(self, u):
+          return self.info[u]
+  
+      def set_tree_data(self, u, tree_data):
+          self.info[u] = tree_data
+  
+      def add(self):
+          self.data.append(dict())
+          self.info.append(TreeData())
+          self.size += 1
+          return self.size - 1
+  
+      def is_leaf(self, u):
+          return self.info[u].is_leaf()
+\end{lstlisting}
+\pagebreak
+\subsubsection{Decision Tree}
+Описываю сам класс дерева принятия решений. Функция \texttt{decide\_rec} нужна для спуска по дереву. \texttt{get\_split\_ids} возвращает индексы признаков, по которым будет происходит деление --- случайные индексы или индексы всех признаков. \texttt{calc\_cnt} подсчитывает количество каждого класса в узле, а \texttt{calc\_p} вычисляет вероятности классов. Функция \texttt{crit} вычисляет метрики разбиения данных. Поддерживаются три метрики, как и в \texttt{DecisionTreeClassifier} \cite{dtc}.
+\begin{lstlisting}[language=python, keepspaces=true]
+class DecisionTree:
+      def __init__(self, classes, max_depth, min_samples_split, splitter, criterion):
+          self.tree = Graph()
+          self.classes = classes
+          self.max_depth = max_depth
+          self.min_samples_split = min_samples_split
+          self.splitter = splitter
+          self.criterion = criterion
+          self.data = []
+          self.INF = 1e18
+  
+      def decide(self, X):
+          return self.decide_rec(0, X)
+  
+      def decide_rec(self, u, X):
+          u_data = self.tree.get_tree_data(u)
+          if self.tree.is_leaf(u):
+              return u_data.value
+          else:
+              dec = u_data.decide(X)
+              return self.decide_rec(self.tree.go(u, dec), X)
+  
+      def make_leaf(self, u, value):
+          u_data = TreeData(value=value, leaf=True)
+          self.tree.set_tree_data(u, u_data)
+  
+      def rnd_ids(self, n):
+          res = set()
+          while len(res) * len(res) < n:
+              rnd_num = randint(0, n - 1)
+              while rnd_num in res:
+                  rnd_num = randint(0, n - 1)
+              res.add(rnd_num)
+          return np.array([elem for elem in res])
+      
+      def get_split_ids(self):
+          if self.splitter == "random":
+              return self.rnd_ids(self.d)
+          if self.splitter == "best":
+              return range(self.d)
+  
+      def build(self, X, y):
+          self.X = X
+          self.y = y
+          self.n = X.shape[0]
+          self.d = X.shape[1]
+          ids = np.arange(self.n)
+          self.build_rec(0, ids, 1)
+  
+      def calc_cnt(self, ids):
+          cnt = np.zeros(self.classes)
+          for j in ids:
+              cnt[self.y[j]] += 1
+          uniq = 0
+          for el in cnt:
+              if (el < 1):
+                  uniq += 1        
+          return cnt, uniq
+  
+      def calc_p(self, cnt):
+          n = 0
+          for el in cnt:
+              n += el
+          return cnt / n
+  
+      def entropy(self, cnt, p):
+          res = 0
+          for i, elem in enumerate(p):
+              if elem > 0:
+                  res += elem * np.log(elem)
+          return -res
+      
+      def gini(self, cnt, p):
+          res = 0
+          for elem in p:
+              res += elem * (1 - elem)
+          return res
+  
+      def log_loss(self, cnt, p):
+          res = 0
+          for i, elem in enumerate(p):
+              if 0 < elem < 1:
+                  res += elem * np.log(elem) + (1 - elem) * np.log(1 - elem)
+          return -res
+  
+      def crit(self, cnt, p):
+          if self.criterion == "entropy":
+              return self.entropy(cnt, p)
+          if self.criterion == "gini":
+              return self.gini(cnt, p)
+          if self.criterion == "log_loss":
+              return self.log_loss(cnt, p)
+  
+      def build_rec(self, u, ids, h):
+          n = len(ids)
+          cnt, uniq = self.calc_cnt(ids)
+          p = self.calc_p(cnt)
+          stop1 = n < self.min_samples_split
+          stop2 = False if self.max_depth == None else h > self.max_depth
+          stop3 = uniq == 1
+          if stop1 or stop2 or stop3:
+              self.make_leaf(u, p)
+              return
+          u_data = self.tree.get_tree_data(u)
+          split_ids = self.get_split_ids()
+          loss = self.INF
+          res = (-1, -1)
+          for i in split_ids:
+              tmp = sorted([(self.X[j][i], self.y[j]) for j in ids])
+              size_l, size_r = 0, n
+              cnt_l, cnt_r = np.zeros(self.classes), [el for el in cnt]
+              for j in range(self.n):
+                  while size_l < n and leq(tmp[size_l][0], tmp[j][0]):
+                      elem_y = tmp[size_l][1]
+                      cnt_l[elem_y] += 1
+                      cnt_r[elem_y] -= 1
+                      size_l += 1
+                  size_r = n - size_l
+                  if size_l == 0 or size_r == 0:
+                      continue
+                  p_l, p_r = self.calc_p(cnt_l), self.calc_p(cnt_r)
+                  loss_l = self.crit(cnt_l, p_l)
+                  loss_r = self.crit(cnt_r, p_r)
+                  split_loss = (size_l * loss_l + size_r * loss_r) / n
+                  if split_loss < loss:
+                      loss = split_loss
+                      res = (i, tmp[j][0])
+          if res == (-1, -1):
+              self.make_leaf(u, p)
+              return
+          u_data = TreeData(value=res[1], ind=res[0], leaf=False)
+          self.tree.set_tree_data(u, u_data)
+          l, r = [], []
+          for j in ids:
+              if u_data.decide(self.X[j]):
+                  l.append(j)
+              else:
+                  r.append(j)
+          ul = self.tree.add()
+          ur = self.tree.add()
+          self.tree.set_go(u, True, ul)
+          self.tree.set_go(u, False, ur)
+          self.build_rec(ul, np.array(l), h + 1)
+          self.build_rec(ur, np.array(r), h + 1)
+\end{lstlisting}
+\pagebreak
+\subsubsection{Классификатор}
+Сам классификатор унаследован от \texttt{ClassifierMixin} и \texttt{BaseEstimator}, как описано в \cite{estimators} и \cite{skgit}. Это нужно для интеграции с \texttt{sklearn} и кроссвалидации.
+\begin{lstlisting}[language=python, keepspaces=true]
+class MyDecisionTreeClassifier(ClassifierMixin, BaseEstimator):
+      def __init__(
+          self,
+          classes=2,
+          max_depth=None,
+          min_samples_split=2,
+          splitter="best",
+          criterion="gini",
+      ):
+          self.classes = classes
+          self.max_depth = max_depth
+          self.min_samples_split = min_samples_split
+          self.splitter = splitter
+          self.criterion = criterion
+          self.tree = DecisionTree(
+              classes, max_depth, min_samples_split, splitter, criterion
+          )
+  
+      def fit(self, X, y):
+          # Check that X and y have correct shape
+          X, y = check_X_y(X, y)
+          # Store the classes seen during fit
+          self.classes_ = unique_labels(y)
+  
+          self.X_ = X
+          self.y_ = y
+          self.tree.build(X, y)
+          # Return the classifier
+          return self
+  
+      def predict(self, X):
+          # Check is fit had been called
+          check_is_fitted(self, ["X_", "y_"])
+  
+          # Input validation
+          X = check_array(X)
+  
+          p = []
+          for elem in X:
+              z = self.tree.decide(elem)
+              p.append(np.argmax(z))
+          return np.array(p)
+\end{lstlisting}
+\pagebreak
+\subsection{Описание алгоритма}
+\subsubsection{Классификация}
+Дерево решений --- это бинарное дерево, в каждом узле которого хранится предикат. Если значение компоненты вектора больше значения, записанного в узле, то переходим в правое поддерево, иначе в левое. Так каждый входной вектор спускается от корня до листа и мы определяем вероятность принадлежности к каждому классу.
+\subsubsection{Построение}
+Дерево строится рекурсивно. Изначально есть вся обучающая выборка. Перебираем каждый признак, по которому возможно разделить выборку на две, сортируем по этому признаку объекты выборки. Теперь перебираем за один проход величину, которую запишем в узел: все объекты с меньшим или равным значение пойдут налево, все объекты с большим пойдут направо. Предполагая, что при таком делении мы создадим два листа, вычисляем ошибку рабиения. Чем она меньше, тем лучше разбиение. После перебора всех признаков и значений, разбиваем выборку и строим дерево рекурсивно для левого и правого поддеревьев.
+\pagebreak
