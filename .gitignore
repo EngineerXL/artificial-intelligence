@@ -7,8 +7,11 @@ VOC*
 ## MNIST dataset
 MNIST
 
-## CIFAR-10 dataset
-cifar-10*
+## CIFAR-10 datasets
+cifar*
+
+## English Handwritten Characters dataset
+eng*
 
 ## LaTeX part
 ## Core latex/pdflatex auxiliary files:
