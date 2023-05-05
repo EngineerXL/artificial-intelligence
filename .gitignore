@@ -13,6 +13,9 @@ cifar*
 ## English Handwritten Characters dataset
 eng*
 
+## tensorflow-great-barrier-reef
+tensorflow-great-barrier-reef*
+
 ## LaTeX part
 ## Core latex/pdflatex auxiliary files:
 *.aux

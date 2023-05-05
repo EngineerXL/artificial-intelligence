@@ -1,0 +1,7 @@
+path: ../../data/tensorflow-great-barrier-reef
+train: images/train
+val: images/val
+test:
+
+nc: 1
+names: [ "starfish" ]

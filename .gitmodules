@@ -1,0 +1,3 @@
+[submodule "aidl/lab5/yolov5"]
+	path = aidl/lab5/yolov5
+	url = https://github.com/ultralytics/yolov5
